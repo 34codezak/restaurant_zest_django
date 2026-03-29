@@ -1,0 +1,193 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Make Reservation - Zest Restaurant{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tableSelect = document.getElementById('id_table');
+    const guestsInput = document.getElementById('id_number_of_guests');
+    const capacityHint = document.getElementById('capacity-hint');
+    const errorDiv = document.getElementById('capacity-error');
+    
+    // ✅ Table capacities passed from view as JSON
+    const tableCapacities = {{ table_capacities_json|safe }};
+    
+    function updateGuestLimits() {
+        const selectedTableId = tableSelect.value;
+        
+        if (selectedTableId && tableCapacities[selectedTableId]) {
+            const capacity = tableCapacities[selectedTableId];
+            
+            // Update input constraints
+            guestsInput.max = capacity;
+            guestsInput.min = 1;
+            
+            // Adjust value if it exceeds capacity
+            if (parseInt(guestsInput.value) > capacity) {
+                guestsInput.value = capacity;
+            }
+            
+            // Update visual hint
+            if (capacityHint) {
+                capacityHint.textContent = `Maximum ${capacity} guest${capacity > 1 ? 's' : ''} for this table`;
+                capacityHint.className = 'text-muted small';
+            }
+            
+            // Clear any previous errors
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+        } else {
+            // Reset if no table selected
+            guestsInput.max = 20;
+            guestsInput.min = 1;
+            if (capacityHint) {
+                capacityHint.textContent = 'Select a table to see capacity';
+                capacityHint.className = 'text-muted small';
+            }
+        }
+    }
+    
+    // Real-time validation
+    guestsInput.addEventListener('input', function() {
+        const selectedTableId = tableSelect.value;
+        const guests = parseInt(this.value);
+        
+        if (selectedTableId && tableCapacities[selectedTableId]) {
+            const capacity = tableCapacities[selectedTableId];
+            
+            if (guests > capacity) {
+                if (errorDiv) {
+                    errorDiv.textContent = `⚠️ This table only seats ${capacity} people`;
+                    errorDiv.className = 'text-danger small mt-1';
+                    errorDiv.style.display = 'block';
+                }
+                this.classList.add('is-invalid');
+            } else {
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                }
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        }
+    });
+    
+    // Update when table changes
+    tableSelect.addEventListener('change', updateGuestLimits);
+    
+    // Initialize on page load
+    updateGuestLimits();
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card">
+        <div class="card-header text-center">
+            <h3><i class="fas fa-calendar-plus"></i> Make a Reservation</h3>
+            <p>Book your table at Zest Restaurant</p>
+        </div>
+        <div class="card-body p-4">
+            <form method="post" id="reservation-form">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="{{ form.table.id_for_label }}" class="form-label">
+                        <i class="fas fa-chair"></i> Select Table
+                    </label>
+                    {{ form.table }}
+                    {% if form.table.errors %}
+                        <div class="text-danger small">{{ form.table.errors }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">
+                        Choose a table based on your party size
+                    </small>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.reservation_date.id_for_label }}" class="form-label">
+                            <i class="fas fa-calendar"></i> Date
+                        </label>
+                        {{ form.reservation_date }}
+                        {% if form.reservation_date.errors %}
+                            <div class="text-danger small">{{ form.reservation_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.reservation_time.id_for_label }}" class="form-label">
+                            <i class="fas fa-clock"></i> Time
+                        </label>
+                        {{ form.reservation_time }}
+                        {% if form.reservation_time.errors %}
+                            <div class="text-danger small">{{ form.reservation_time.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.number_of_guests.id_for_label }}" class="form-label">
+                        <i class="fas fa-users"></i> Number of Guests
+                    </label>
+                    {{ form.number_of_guests }}
+                    <small id="capacity-hint" class="form-text text-muted">
+                        Select a table to see capacity
+                    </small>
+                    <div id="capacity-error" class="text-danger small mt-1" style="display: none;"></div>
+                    {% if form.number_of_guests.errors %}
+                        <div class="text-danger small">{{ form.number_of_guests.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                        <i class="fas fa-phone"></i> Phone Number
+                    </label>
+                    {{ form.phone_number }}
+                    {% if form.phone_number.errors %}
+                        <div class="text-danger small">{{ form.phone_number.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                        <i class="fas fa-envelope"></i> Email
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="text-danger small">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.special_requests.id_for_label }}" class="form-label">
+                        <i class="fas fa-comment"></i> Special Requests (Optional)
+                    </label>
+                    {{ form.special_requests }}
+                    {% if form.special_requests.errors %}
+                        <div class="text-danger small">{{ form.special_requests.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-check"></i> Confirm Reservation
+                    </button>
+                </div>
+            </form>
+            
+            <hr class="my-4">
+            
+            <p class="text-center mb-0">
+                <a href="{% url 'home' %}" class="text-decoration-none">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

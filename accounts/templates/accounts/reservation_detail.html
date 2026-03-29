@@ -1,0 +1,75 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Reservation Details - Zest Restaurant{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card">
+        <div class="card-header text-center">
+            <h3><i class="fas fa-receipt"></i> Reservation Details</h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p><strong>Reservation ID:</strong> #{{ reservation.pk }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-{% if reservation.status == 'confirmed' %}success{% elif reservation.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                            {{ reservation.get_status_display }}
+                        </span>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Created:</strong> {{ reservation.created_at|date:"M d, Y H:i" }}</p>
+                    <p><strong>Updated:</strong> {{ reservation.updated_at|date:"M d, Y H:i" }}</p>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <h5 class="mb-3"><i class="fas fa-calendar-alt"></i> Reservation Information</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <p><strong>Date:</strong> {{ reservation.reservation_date }}</p>
+                    <p><strong>Time:</strong> {{ reservation.reservation_time }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <p><strong>Table:</strong> {{ reservation.table.table_number }}</p>
+                    <p><strong>Capacity:</strong> {{ reservation.table.capacity }} seats</p>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <h5 class="mb-3"><i class="fas fa-users"></i> Guest Information</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <p><strong>Number of Guests:</strong> {{ reservation.number_of_guests }}</p>
+                    <p><strong>Phone:</strong> {{ reservation.phone_number }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <p><strong>Email:</strong> {{ reservation.email }}</p>
+                </div>
+            </div>
+            
+            {% if reservation.special_requests %}
+                <hr>
+                <h5 class="mb-3"><i class="fas fa-comment"></i> Special Requests</h5>
+                <p>{{ reservation.special_requests }}</p>
+            {% endif %}
+            
+            <hr class="my-4">
+            
+            <div class="text-center">
+                <a href="{% url 'home' %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                {% if reservation.status != 'cancelled' and reservation.is_upcoming %}
+                    <a href="{% url 'cancel_reservation' reservation.pk %}" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Cancel Reservation
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

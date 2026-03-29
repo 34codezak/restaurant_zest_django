@@ -1,0 +1,52 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Protected Area - Zest Restaurant{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h3><i class="fas fa-shield-alt"></i> Protected Area</h3>
+        </div>
+        <div class="card-body text-center p-5">
+            <i class="fas fa-lock text-success" style="font-size: 5rem; margin-bottom: 20px;"></i>
+            <h2 class="mb-4">Access Granted!</h2>
+            <p class="lead">
+                You are viewing this protected page as <strong>{{ user.username }}</strong>.
+            </p>
+            <p class="text-muted">
+                This page is only accessible to authenticated users.
+            </p>
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="p-3 border rounded">
+                        <i class="fas fa-user text-primary mb-2"></i>
+                        <h5>Username</h5>
+                        <p>{{ user.username }}</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded">
+                        <i class="fas fa-envelope text-primary mb-2"></i>
+                        <h5>Email</h5>
+                        <p>{{ user.email }}</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded">
+                        <i class="fas fa-clock text-primary mb-2"></i>
+                        <h5>Last Login</h5>
+                        <p>{{ user.last_login|date:"M d, Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{% url 'home' %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Home - Zest Restaurant{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Welcome Section -->
+    <div class="text-center mb-5">
+        <h1 class="text-white">
+            Welcome, <span class="logo-text">{{ user.username }}</span>!
+        </h1>
+        <p class="text-white-50">Manage your reservations with ease</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <i class="fas fa-calendar-check"></i>
+                <h3>{{ upcoming_reservations.count }}</h3>
+                <p class="text-muted">Upcoming Reservations</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <i class="fas fa-chair"></i>
+                <h3>{{ available_tables }}</h3>
+                <p class="text-muted">Available Tables</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <i class="fas fa-history"></i>
+                <h3>{{ past_reservations.count }}</h3>
+                <p class="text-muted">Past Visits</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-center mb-5">
+        <a href="{% url 'make_reservation' %}" class="btn btn-primary btn-lg me-3">
+            <i class="fas fa-calendar-plus"></i> Make a Reservation
+        </a>
+        <a href="{% url 'my_reservations' %}" class="btn btn-outline-light btn-lg">
+            <i class="fas fa-list"></i> View All Reservations
+        </a>
+    </div>
+
+    <!-- Upcoming Reservations -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-calendar-alt"></i> Upcoming Reservations</h4>
+        </div>
+        <div class="card-body">
+            {% if upcoming_reservations %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Table</th>
+                                <th>Guests</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reservation in upcoming_reservations %}
+                                <tr>
+                                    <td>{{ reservation.reservation_date }}</td>
+                                    <td>{{ reservation.reservation_time }}</td>
+                                    <td>Table {{ reservation.table.table_number }}</td>
+                                    <td>{{ reservation.number_of_guests }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if reservation.status == 'confirmed' %}success{% elif reservation.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                            {{ reservation.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if reservation.status != 'cancelled' %}
+                                            <a href="{% url 'cancel_reservation' reservation.pk %}" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-times"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-center text-muted">No upcoming reservations. <a href="{% url 'make_reservation' %}">Make one now!</a></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Past Reservations -->
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="fas fa-history"></i> Recent Past Reservations</h4>
+        </div>
+        <div class="card-body">
+            {% if past_reservations %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Table</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reservation in past_reservations %}
+                                <tr>
+                                    <td>{{ reservation.reservation_date }}</td>
+                                    <td>{{ reservation.reservation_time }}</td>
+                                    <td>Table {{ reservation.table.table_number }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ reservation.get_status_display }}</span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-center text-muted">No past reservations.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
