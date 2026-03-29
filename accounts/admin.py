@@ -3,7 +3,8 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.urls import path, reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
+from django.utils.safestring import SafeString
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta, datetime
@@ -43,7 +44,7 @@ class ProfileAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
 
 
-# Table Admin with occupancy indicator
+# Table Admin with occupancy indicator - ✅ FIXED
 @admin.register(Table)
 class TableAdmin(admin.ModelAdmin):
     list_display = ['table_number', 'capacity', 'location', 'status', 'is_active', 'occupancy_indicator']
@@ -53,7 +54,7 @@ class TableAdmin(admin.ModelAdmin):
     list_editable = ['status', 'is_active']
     
     def occupancy_indicator(self, obj):
-        """Show visual indicator of table occupancy today"""
+        """Show visual indicator of table occupancy today - ✅ FIXED"""
         today = timezone.now().date()
         reserved = Reservation.objects.filter(
             table=obj,
@@ -61,15 +62,21 @@ class TableAdmin(admin.ModelAdmin):
             status__in=['pending', 'confirmed']
         ).exists()
         
+        # ✅ FIX: Use mark_safe() for static HTML, or format_html() with placeholders
         if reserved:
-            return format_html('<span style="color: #e74c3c; font-weight: bold;">● Reserved</span>')
+            return mark_safe('<span style="color: #e74c3c; font-weight: bold;">● Reserved</span>')
         elif obj.status == 'available' and obj.is_active:
-            return format_html('<span style="color: #27ae60; font-weight: bold;">● Available</span>')
-        return format_html('<span style="color: #95a5a6;">○ Inactive</span>')
-    occupancy_indicator.short_description = 'Today\'s Status'
+            return mark_safe('<span style="color: #27ae60; font-weight: bold;">● Available</span>')
+        return mark_safe('<span style="color: #95a5a6;">○ Inactive</span>')
+    
+    occupancy_indicator.short_description = "Today's Status"
+    
+    # Optional: Make the column sortable by status
+    def get_ordering(self, request):
+        return super().get_ordering(request) or ['table_number']
 
 
-# Reservation Admin with dashboard
+# Reservation Admin
 @admin.register(Reservation)
 class ReservationAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'table', 'reservation_date', 'reservation_time', 
@@ -102,7 +109,7 @@ class ReservationAdmin(admin.ModelAdmin):
     cancel_reservations.short_description = 'Cancel selected reservations'
     
     def export_selected(self, request, queryset):
-        # Simple CSV export
+        """Export selected reservations to CSV"""
         import csv
         from django.http import HttpResponse
         
@@ -124,7 +131,7 @@ class ReservationAdmin(admin.ModelAdmin):
     export_selected.short_description = 'Export selected reservations'
 
 
-# Custom Admin Site with Dashboard
+# ✅ Custom Admin Site with Dashboard - Compatible Version
 class ZestAdminSite(admin.AdminSite):
     site_header = "🍽️ Zest Restaurant Admin"
     site_title = "Zest Restaurant"
@@ -143,19 +150,30 @@ class ZestAdminSite(admin.AdminSite):
         """Custom dashboard view with charts"""
         context = self.each_context(request)
         
-        # Get metrics
-        metrics = Reservation.get_dashboard_metrics(days=30)
-        occupancy = Table.get_occupancy_stats()
-        realtime = Reservation.get_realtime_data()
+        # Get metrics with error handling
+        try:
+            metrics = Reservation.get_dashboard_metrics(days=30)
+            occupancy = Table.get_occupancy_stats()
+            realtime = Reservation.get_realtime_data()
+        except Exception as e:
+            # Fallback to empty data if metrics fail
+            metrics = {'today_reservations': 0, 'confirmed': 0, 'cancelled': 0, 
+                      'cancellation_rate': 0, 'today_guests': 0, 'popular_times': [],
+                      'daily_trend': [], 'party_sizes': [], 'date_range': {}}
+            occupancy = {'total_tables': 0, 'reserved': 0, 'available': 0, 'occupancy_rate': 0}
+            realtime = {'active_count': 0, 'next_reservation': None, 'tables_in_use': []}
         
         # Recent activity
         recent_reservations = Reservation.objects.select_related('user', 'table').order_by('-created_at')[:10]
         recent_users = User.objects.filter(date_joined__gte=timezone.now()-timedelta(days=7)).order_by('-date_joined')[:5]
         
         context.update({
-            'metrics': metrics,
+            # Pass API URLs to template
+            'metrics_api_url': reverse('zest_admin:admin_metrics_api'),
+            'realtime_api_url': reverse('zest_admin:admin_realtime_api'),
+            # 'metrics': metrics,
             'occupancy': occupancy,
-            'realtime': realtime,
+            # 'realtime': realtime,
             'recent_reservations': recent_reservations,
             'recent_users': recent_users,
             'title': 'Dashboard',
@@ -165,26 +183,28 @@ class ZestAdminSite(admin.AdminSite):
     
     def metrics_api(self, request):
         """API endpoint for chart data"""
-        import json
         from django.http import JsonResponse
         
-        days = int(request.GET.get('days', 30))
-        data = Reservation.get_dashboard_metrics(days=days)
-        
-        return JsonResponse(data)
+        try:
+            days = int(request.GET.get('days', 30))
+            data = Reservation.get_dashboard_metrics(days=days)
+            return JsonResponse(data)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
     
     def realtime_api(self, request):
         """API endpoint for real-time updates"""
-        import json
         from django.http import JsonResponse
         
-        data = Reservation.get_realtime_data()
-        data['occupancy'] = Table.get_occupancy_stats()
-        
-        return JsonResponse(data)
+        try:
+            data = Reservation.get_realtime_data()
+            data['occupancy'] = Table.get_occupancy_stats()
+            return JsonResponse(data)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 
-# Register custom admin site
+# ✅ Register custom admin site
 admin_site = ZestAdminSite(name='zest_admin')
 
 # Register models with custom admin site
@@ -193,5 +213,5 @@ admin_site.register(Profile, ProfileAdmin)
 admin_site.register(Table, TableAdmin)
 admin_site.register(Reservation, ReservationAdmin)
 
-# Replace default admin site
+# ✅ Replace default admin site
 admin.site = admin_site

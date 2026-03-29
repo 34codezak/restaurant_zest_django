@@ -557,7 +557,8 @@ function initCharts() {
 // Refresh data via API
 async function refreshData() {
     try {
-        const response = await fetch('{% url "admin_metrics_api" %}?days=30');
+        // Use context variable passed from view
+        const response = await fetch('{{ metrics_api_url }}?days=30');
         const data = await response.json();
         
         // Update stats cards
