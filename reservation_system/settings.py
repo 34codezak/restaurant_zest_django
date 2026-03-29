@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,7 +39,21 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts',
+    'admin_interface',
+    'chartjs',
+    'colorfield',
 ]
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Zest Restaurant",
+    "site_header": "🍽️ Zest Restaurant Admin",
+    "site_brand": "Zest Restaurant",
+    "welcome_sign": "Welcome to the Zest Restaurant Dashboard",
+    "search_model": ["auth.User", "accounts.Reservation"],
+    "topmenu_links": [
+        {"name": "Dashboard", "url": "admin:admin_dashboard", "permissions": ["auth.view_user"]},
+    ],
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -123,4 +138,19 @@ LOGOUT_REDIRECT_URL = 'login'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Admin interface settings
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+SILENCED_SYSTEM_CHECKS = ['security.W019']  # For admin interface iframe
+
+# Chart.js settings (if using django-chartjs)
+CHARTJS_COLORS = [
+    '#ff6f3c', '#2c3e50', '#f39c12', '#27ae60', '#8e44ad',
+    '#e74c3c', '#1abc9c', '#3498db', '#9b59b6', '#34495e'
+]
+
+# Custom admin site
+ADMIN_SITE_HEADER = "Zest Restaurant Admin"
+ADMIN_SITE_TITLE = "Zest Restaurant"
+ADMIN_INDEX_TITLE = "Dashboard"
 

@@ -1,0 +1,631 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Dashboard | {{ site_title }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    :root {
+        --primary: #ff6f3c;
+        --secondary: #2c3e50;
+        --success: #27ae60;
+        --warning: #f39c12;
+        --danger: #e74c3c;
+        --info: #3498db;
+    }
+    
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--primary), #e55a2b);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .dashboard-header h1 {
+        margin: 0;
+        font-weight: 300;
+    }
+    
+    .dashboard-header .subtitle {
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card .value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--secondary);
+        margin: 0.5rem 0;
+    }
+    
+    .stat-card .label {
+        color: #666;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-card.success .value { color: var(--success); }
+    .stat-card.warning .value { color: var(--warning); }
+    .stat-card.danger .value { color: var(--danger); }
+    .stat-card.info .value { color: var(--info); }
+    
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .chart-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    
+    .chart-card h3 {
+        margin: 0 0 1rem 0;
+        color: var(--secondary);
+        font-size: 1.1rem;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 0.75rem;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        overflow-x: auto;
+    }
+    
+    .data-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th {
+        background: #f8f9fa;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--secondary);
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .data-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .data-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-confirmed { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    
+    .realtime-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #e8f4fd;
+        border-radius: 20px;
+        font-size: 0.9rem;
+    }
+    
+    .realtime-indicator .dot {
+        width: 10px;
+        height: 10px;
+        background: var(--success);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .refresh-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+    }
+    
+    .refresh-btn:hover {
+        background: #e55a2b;
+    }
+    
+    .date-filter {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .date-filter select {
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background: white;
+    }
+    
+    @media (max-width: 768px) {
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>📊 Restaurant Dashboard</h1>
+    <p class="subtitle">Real-time insights for Zest Restaurant</p>
+</div>
+
+<!-- Real-time Status -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div class="realtime-indicator">
+        <span class="dot"></span>
+        <span>Live Updates Active</span>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <button class="refresh-btn" onclick="refreshData()">
+            🔄 Refresh Data
+        </button>
+        <span style="color: #666; font-size: 0.9rem;">
+            Last updated: <span id="last-update">--:--</span>
+        </span>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card info">
+        <div class="label">Today's Reservations</div>
+        <div class="value">{{ metrics.today_reservations }}</div>
+        <div style="color: #666; font-size: 0.85rem;">
+            {{ metrics.today_guests }} guests expected
+        </div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="label">Confirmed</div>
+        <div class="value">{{ metrics.confirmed }}</div>
+        <div style="color: #666; font-size: 0.85rem;">
+            Last {{ metrics.date_range.days }} days
+        </div>
+    </div>
+    
+    <div class="stat-card warning">
+        <div class="label">Table Occupancy</div>
+        <div class="value">{{ occupancy.occupancy_rate }}%</div>
+        <div style="color: #666; font-size: 0.85rem;">
+            {{ occupancy.reserved }}/{{ occupancy.total_tables }} tables
+        </div>
+    </div>
+    
+    <div class="stat-card danger">
+        <div class="label">Cancellation Rate</div>
+        <div class="value">{{ metrics.cancellation_rate }}%</div>
+        <div style="color: #666; font-size: 0.85rem;">
+            {{ metrics.cancelled }} cancelled
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-grid">
+    <!-- Daily Trend Chart -->
+    <div class="chart-card">
+        <h3>📈 Reservations Trend (Last {{ metrics.date_range.days }} Days)</h3>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Party Size Distribution -->
+    <div class="chart-card">
+        <h3>👥 Party Size Distribution</h3>
+        <div class="chart-container">
+            <canvas id="partyChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Popular Times -->
+    <div class="chart-card">
+        <h3>🕐 Popular Time Slots</h3>
+        <div class="chart-container">
+            <canvas id="timesChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Occupancy Gauge -->
+    <div class="chart-card">
+        <h3>📊 Today's Table Occupancy</h3>
+        <div class="chart-container" style="display: flex; align-items: center; justify-content: center;">
+            <canvas id="occupancyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+    <!-- Recent Reservations -->
+    <div class="data-table">
+        <h3 style="margin: 0 0 1rem 0; color: var(--secondary);">📋 Recent Reservations</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Table</th>
+                    <th>Date/Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for res in recent_reservations %}
+                <tr>
+                    <td>#{{ res.id }}</td>
+                    <td>{{ res.user.username }}</td>
+                    <td>T{{ res.table.table_number }}</td>
+                    <td>{{ res.reservation_date }} {{ res.reservation_time }}</td>
+                    <td>
+                        <span class="status-badge status-{{ res.status }}">
+                            {{ res.get_status_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="text-align: center; color: #666;">No recent reservations</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- New Users -->
+    <div class="data-table">
+        <h3 style="margin: 0 0 1rem 0; color: var(--secondary);">👤 New Users (This Week)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Joined</th>
+                    <th>Reservations</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in recent_users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.date_joined|date:"M d" }}</td>
+                    <td>{{ user.reservations.count }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" style="text-align: center; color: #666;">No new users this week</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Real-time Active Reservations -->
+{% if realtime.active_count > 0 %}
+<div class="data-table" style="margin-top: 1.5rem;">
+    <h3 style="margin: 0 0 1rem 0; color: var(--secondary);">
+        🔔 Active Right Now ({{ realtime.active_count }})
+    </h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Table</th>
+                <th>Guest</th>
+                <th>Time</th>
+                <th>Guests</th>
+                <th>Contact</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for res in realtime.active_reservations %}
+            <tr>
+                <td><strong>T{{ res.table.table_number }}</strong></td>
+                <td>{{ res.user.username }}</td>
+                <td>{{ res.reservation_time }}</td>
+                <td>{{ res.number_of_guests }}</td>
+                <td>{{ res.phone_number }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Global chart instances
+let trendChart, partyChart, timesChart, occupancyChart;
+
+// Initialize all charts
+function initCharts() {
+    const metrics = {{ metrics|safe }};
+    const occupancy = {{ occupancy|safe }};
+    
+    // Daily Trend Chart
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const trendData = metrics.daily_trend;
+    
+    trendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => new Date(d.reservation_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
+            datasets: [
+                {
+                    label: 'Total',
+                    data: trendData.map(d => d.count),
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Confirmed',
+                    data: trendData.map(d => d.confirmed_count),
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+    
+    // Party Size Chart
+    const partyCtx = document.getElementById('partyChart').getContext('2d');
+    const partyData = metrics.party_sizes;
+    
+    partyChart = new Chart(partyCtx, {
+        type: 'bar',
+        data: {
+            labels: partyData.map(d => `${d.number_of_guests} guest${d.number_of_guests > 1 ? 's' : ''}`),
+            datasets: [{
+                label: 'Reservations',
+                data: partyData.map(d => d.count),
+                backgroundColor: '#ff6f3c',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+    
+    // Popular Times Chart
+    const timesCtx = document.getElementById('timesChart').getContext('2d');
+    const timesData = metrics.popular_times;
+    
+    timesChart = new Chart(timesCtx, {
+        type: 'bar',
+        data: {
+            labels: timesData.map(d => new Date(`2000-01-01T${d.reservation_time}`).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})),
+            datasets: [{
+                label: 'Bookings',
+                data: timesData.map(d => d.count),
+                backgroundColor: '#9b59b6',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+    
+    // Occupancy Gauge (Doughnut)
+    const occCtx = document.getElementById('occupancyChart').getContext('2d');
+    
+    occupancyChart = new Chart(occCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Reserved', 'Available'],
+            datasets: [{
+                data: [occupancy.reserved, occupancy.available],
+                backgroundColor: ['#e74c3c', '#27ae60'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed} tables`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Add center text to doughnut
+    const originalDraw = occupancyChart.draw;
+    occupancyChart.draw = function() {
+        originalDraw.call(this);
+        const {chart} = this;
+        const {width, height, ctx} = chart;
+        const x = width / 2;
+        const y = height / 2;
+        
+        ctx.save();
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillStyle = '#2c3e50';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${occupancy.occupancy_rate}%`, x, y - 10);
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Occupied', x, y + 10);
+        ctx.restore();
+    };
+}
+
+// Refresh data via API
+async function refreshData() {
+    try {
+        const response = await fetch('{% url "admin_metrics_api" %}?days=30');
+        const data = await response.json();
+        
+        // Update stats cards
+        document.querySelector('.stat-card.info .value').textContent = data.today_reservations;
+        document.querySelector('.stat-card.success .value').textContent = data.confirmed;
+        document.querySelector('.stat-card.danger .value').textContent = data.cancellation_rate + '%';
+        
+        // Update charts
+        updateCharts(data);
+        
+        // Update timestamp
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+        
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+    }
+}
+
+// Update charts with new data
+function updateCharts(data) {
+    // Update trend chart
+    if (trendChart) {
+        trendChart.data.labels = data.daily_trend.map(d => new Date(d.reservation_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}));
+        trendChart.data.datasets[0].data = data.daily_trend.map(d => d.count);
+        trendChart.data.datasets[1].data = data.daily_trend.map(d => d.confirmed_count);
+        trendChart.update();
+    }
+    
+    // Update party chart
+    if (partyChart) {
+        partyChart.data.labels = data.party_sizes.map(d => `${d.number_of_guests} guest${d.number_of_guests > 1 ? 's' : ''}`);
+        partyChart.data.datasets[0].data = data.party_sizes.map(d => d.count);
+        partyChart.update();
+    }
+    
+    // Update times chart
+    if (timesChart) {
+        timesChart.data.labels = data.popular_times.map(d => new Date(`2000-01-01T${d.reservation_time}`).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'}));
+        timesChart.data.datasets[0].data = data.popular_times.map(d => d.count);
+        timesChart.update();
+    }
+}
+
+// Auto-refresh every 60 seconds
+let autoRefresh;
+function startAutoRefresh() {
+    autoRefresh = setInterval(refreshData, 60000);
+}
+
+function stopAutoRefresh() {
+    if (autoRefresh) clearInterval(autoRefresh);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initCharts();
+    startAutoRefresh();
+    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+    
+    // Stop auto-refresh when page is hidden (saves resources)
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+            refreshData();
+        }
+    });
+});
+</script>
+{% endblock %}

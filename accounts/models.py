@@ -58,6 +58,26 @@ class Table(models.Model):
     
     def __str__(self):
         return f'Table {self.table_number} ({self.capacity} seats)'
+    
+    @classmethod
+    def get_occupancy_stats(cls, date=None):
+        """Get table occupancy statistics for a given date"""
+        if date is None:
+            date = timezone.now().date()
+        
+        total_tables = cls.objects.filter(is_active=True).count()
+        reserved_count = Reservation.objects.filter(
+            reservation_date=date,
+            table__is_active=True,
+            status__in=['pending', 'confirmed']
+        ).values('table').distinct().count()
+        
+        return {
+            'total_tables': total_tables,
+            'reserved': reserved_count,
+            'available': total_tables - reserved_count,
+            'occupancy_rate': round((reserved_count / total_tables * 100), 1) if total_tables > 0 else 0
+        }
 
 
 class Reservation(models.Model):
